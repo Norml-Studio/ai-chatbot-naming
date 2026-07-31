@@ -1,14 +1,14 @@
-# AI Chatbot Naming Review — Design Contract
+# WP Concierge Product Direction — Design Contract
 
 > **This file is binding.** Every build or edit in this artifact follows the values below.
 >
-> **Status:** v1.2.0 · Jul 31, 2026
+> **Status:** v1.3.0 · Jul 31, 2026
 > **Implemented in:** `../index.html` and `../styles.css`
 > **Mode:** DEFINE — a self-contained strategic review page, not a product website.
 
 ## 1. Identity
 
-Editorial naming review: calm, opinionated, and legible at a distance. The page behaves like an independent strategy memo with a digital reading experience, not a dashboard or SaaS landing page.
+Editorial product-direction review: calm, opinionated, and legible at a distance. The page behaves like an independent strategy memo with a digital reading experience, not a dashboard or SaaS landing page.
 
 ## 2. Colour
 
@@ -130,7 +130,7 @@ Don’t:
 
 | Source | What it gave |
 |---|---|
-| `Product naming — reset field [Strategy] | AI Chatbot.md` | Reset content, candidate field, naming territories, and legal caveat |
+| `Product positioning [Strategy] | AI Chatbot.md` | Product direction, capability set, and legal caveat |
 | `vibe-frontend-standards` | Responsive layout contract |
 | `design-anti-slop` | Universal visual constraints |
 | `make-interfaces-feel-better` | Detail polish rules |
