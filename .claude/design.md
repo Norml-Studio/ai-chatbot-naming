@@ -2,7 +2,7 @@
 
 > **This file is binding.** Every build or edit in this artifact follows the values below.
 >
-> **Status:** v1.0.0 · Jul 30, 2026
+> **Status:** v1.1.0 · Jul 30, 2026
 > **Implemented in:** `../index.html` and `../styles.css`
 > **Mode:** DEFINE — a self-contained strategic review page, not a product website.
 
@@ -29,10 +29,10 @@ Accent discipline: clay appears only in rank markers, focus states, active filte
 
 | Role | Family | Usage |
 |---|---|---|
-| Display | `Bodoni Moda` | H1/H2, large candidate names |
+| Display | `Source Serif 4` | H1/H2, large candidate names |
 | Text | `Public Sans` | Body, controls, tables, notes |
 
-Google Fonts are used under their open licences. Banned: Inter, Roboto, Arial, system-ui as the primary face; any mono face for visual garnish; all eyebrows and micro-labels above headings.
+Google Fonts are used under their open licences. Source Serif 4 replaces the earlier Bodoni Moda choice because its lower contrast and sturdier forms remain easier to read at display size. Banned: Inter, Roboto, Arial, system-ui as the primary face; any mono face for visual garnish; all eyebrows and micro-labels above headings.
 
 | Role | Desktop | Tablet | Mobile | Weight | Leading | Tracking |
 |---|---:|---:|---:|---:|---:|---:|
@@ -123,7 +123,7 @@ Don’t:
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet" />
 ```
 
 ## 13. Provenance
