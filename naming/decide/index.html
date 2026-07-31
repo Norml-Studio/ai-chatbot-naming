@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="A local naming-decision lab for reviewing and learning from name ratings." />
+    <title>Naming Decision Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header><a href="/naming/">← Naming field</a><p>Naming decision lab <span id="bridge-status">Checking local bridge…</span></p><button id="reset" type="button">Reset local data</button></header>
+    <main>
+      <section class="intro"><div><p class="label">Batch <span id="batch-number">01</span></p><h1>Rate the pull,<br />not just the name.</h1></div><p>Swipe diagonally, or use the score controls. Your decisions stay on this device. Every completed 20-name batch can teach the next one.</p></section>
+      <section class="lab" aria-label="Name rating area">
+        <div class="progress"><span id="progress-text">1 of 20</span><div><i id="progress-bar"></i></div><button id="undo" type="button" disabled>Undo</button></div>
+        <div id="deck" class="deck">
+          <div class="quadrant q3">3<br /><small>no</small></div><div class="quadrant q4">4<br /><small>yes</small></div><div class="quadrant q2">2<br /><small>strong no</small></div><div class="quadrant q5">5<br /><small>strong yes</small></div>
+          <article id="card" class="card" tabindex="0"><p class="card-territory" id="card-territory"></p><h2 id="card-name"></h2><p id="card-description"></p><small id="card-source"></small></article>
+        </div>
+        <div class="score-controls"><button data-score="2" type="button"><b>2</b><span>Strong no</span></button><button data-score="3" type="button"><b>3</b><span>No</span></button><button data-score="4" type="button"><b>4</b><span>Yes</span></button><button data-score="5" type="button"><b>5</b><span>Strong yes</span></button></div>
+        <p class="gesture-note">Upper left = 3 · upper right = 4 · lower left = 2 · lower right = 5</p>
+      </section>
+      <section id="batch-complete" class="batch-complete" hidden>
+        <p class="label">Batch complete</p><h2>Tell the next batch what the scores missed.</h2><textarea id="reflection" placeholder="What felt right or wrong? What do you want more or less of?"></textarea>
+        <div class="batch-actions"><button id="generate" type="button">Analyze &amp; generate 20</button><button id="continue-seed" class="quiet" type="button">Continue with seed names</button></div>
+        <p id="generation-message"></p><article id="analysis" hidden><h3>What the model heard</h3><p id="analysis-text"></p><div id="analysis-tags"></div></article>
+      </section>
+      <section class="history"><div><p class="label">Decision record</p><h2>Everything you rated.</h2></div><div class="history-stats" id="stats"></div><div class="history-list" id="history-list"></div></section>
+    </main>
+    <template id="history-row"><article><span class="history-score"></span><div><h3></h3><p></p></div><small></small></article></template>
+    <script src="./seed.js"></script><script src="./app.js"></script>
+  </body>
+</html>
