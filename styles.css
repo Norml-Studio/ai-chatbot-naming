@@ -98,6 +98,10 @@ h2 { font-size: clamp(36px, 4.5vw, 66px); letter-spacing: -.045em; line-height: 
 .flow-list span { color: var(--clay); font-size: 15px; font-variant-numeric: tabular-nums; font-weight: 700; padding-top: 8px; }
 .flow-list h3 { font-family: var(--display); font-size: clamp(29px, 3.1vw, 43px); font-weight: 500; letter-spacing: -.035em; line-height: 1.02; margin: 0; }
 .flow-list p { color: rgba(245,240,232,.68); font-size: 16px; margin: 10px 0 0; max-width: 62ch; text-wrap: pretty; }
+.naming-grid { display: grid; gap: 32px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 64px; max-width: 1280px; }
+.naming-grid article { border-top: 1px solid var(--dark-line); padding-top: 20px; }
+.naming-grid .meta { color: var(--clay); margin-bottom: 24px; }
+.naming-grid h3 { border-bottom: 1px solid var(--dark-line); font-family: var(--display); font-size: 27px; font-weight: 500; letter-spacing: -.025em; line-height: 1.1; margin: 0; padding-block: 14px; }
 .field-counter { color: var(--clay); flex: 0 0 auto; font-size: 18px; font-variant-numeric: tabular-nums; font-weight: 700; margin: 0; }
 .filters { border-block: 1px solid var(--dark-line); display: grid; gap: 18px; margin-top: 64px; padding-block: 22px; }
 .filter-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -158,6 +162,7 @@ footer p { margin: 0; }
   .field-head { align-items: start; flex-direction: column; gap: 20px; }
   .candidate { grid-template-columns: 44px 1fr 130px 82px; }
   .flow-list article { grid-template-columns: 52px 1fr; }
+  .naming-grid { grid-template-columns: 1fr 1fr; }
   .screening { gap: 56px; }
   .response { padding-block: 96px 112px; }
 }
@@ -192,6 +197,8 @@ footer p { margin: 0; }
   .flow-list article { gap: 16px; grid-template-columns: 36px 1fr; padding-block: 24px; }
   .flow-list h3 { font-size: 31px; }
   .flow-list p { font-size: 15px; }
+  .naming-grid { gap: 32px 20px; margin-top: 40px; }
+  .naming-grid h3 { font-size: 24px; }
   .candidate-index { padding-top: 6px; }
   .candidate h3 { font-size: 26px; }
   .candidate-territory { grid-column: 2; }

@@ -2,13 +2,13 @@
 
 > **This file is binding.** Every build or edit in this artifact follows the values below.
 >
-> **Status:** v1.3.0 · Jul 31, 2026
+> **Status:** v1.4.0 · Jul 31, 2026
 > **Implemented in:** `../index.html` and `../styles.css`
 > **Mode:** DEFINE — a self-contained strategic review page, not a product website.
 
 ## 1. Identity
 
-Editorial product-direction review: calm, opinionated, and legible at a distance. The page behaves like an independent strategy memo with a digital reading experience, not a dashboard or SaaS landing page.
+Editorial product-direction and naming review: calm, opinionated, and legible at a distance. The page behaves like an independent strategy memo with a digital reading experience, not a dashboard or SaaS landing page.
 
 ## 2. Colour
 
