@@ -2,7 +2,7 @@
 
 > **This file is binding.** Every build or edit in this artifact follows the values below.
 >
-> **Status:** v1.1.0 · Jul 30, 2026
+> **Status:** v1.2.0 · Jul 31, 2026
 > **Implemented in:** `../index.html` and `../styles.css`
 > **Mode:** DEFINE — a self-contained strategic review page, not a product website.
 
@@ -130,7 +130,7 @@ Don’t:
 
 | Source | What it gave |
 |---|---|
-| `Product naming [Strategy] | AI Chatbot.md` | Content, candidate field, shortlist, and legal caveat |
+| `Product naming — reset field [Strategy] | AI Chatbot.md` | Reset content, candidate field, naming territories, and legal caveat |
 | `vibe-frontend-standards` | Responsive layout contract |
 | `design-anti-slop` | Universal visual constraints |
 | `make-interfaces-feel-better` | Detail polish rules |

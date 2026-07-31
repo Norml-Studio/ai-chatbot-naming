@@ -107,11 +107,8 @@ h2 { font-size: clamp(36px, 4.5vw, 66px); letter-spacing: -.045em; line-height: 
 .candidate p { color: rgba(245,240,232,.68); font-size: 13px; line-height: 1.45; margin: 5px 0 0; max-width: 56ch; }
 .candidate-territory { color: rgba(245,240,232,.62); font-size: 12px; line-height: 1.35; }
 .status { border: 1px solid currentColor; border-radius: 100px; font-size: 11px; font-weight: 700; justify-self: start; letter-spacing: .04em; padding: 5px 8px; }
-.candidate--shortlist .status { color: #f4bf64; }
-.candidate--watch .status { color: #dba899; }
-.candidate--hold .status { color: #a7b7aa; }
-.candidate--remove { opacity: .5; }
-.candidate--remove .status { color: #c3bbb1; }
+.candidate--starter .status { color: #f4bf64; }
+.candidate--explore .status { color: #b7c9bc; }
 
 .screening { align-items: start; display: grid; gap: 80px; grid-template-columns: 1fr .85fr; padding-block: 144px; }
 .screening-note { max-width: 600px; }
