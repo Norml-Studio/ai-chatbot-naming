@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import http from "node:http";
-import { readFile, stat, mkdtemp, rm } from "node:fs/promises";
+import { readFile, stat, mkdtemp, rm, mkdir } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { dirname, extname, join, normalize, resolve } from "node:path";
-import { tmpdir } from "node:os";
+import { tmpdir, homedir, networkInterfaces, hostname } from "node:os";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -12,10 +12,17 @@ const appRoot = resolve(here, "../..");
 const schemaPath = join(here, "response.schema.json");
 const codex = process.env.CODEX_BIN || "codex";
 const port = Number(process.env.PORT || 4310);
+const lan = process.argv.includes("--lan");
+const host = lan ? "0.0.0.0" : "127.0.0.1";
+const dbPath = process.env.NAMING_DB_PATH || join(homedir(), "Library", "Application Support", "Norml Studio", "Naming Decision Lab", "decision-lab.sqlite");
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".css": "text/css; charset=utf-8", ".png": "image/png", ".svg": "image/svg+xml" };
 
 function send(res, code, body, type = "application/json; charset=utf-8") { res.writeHead(code, { "Content-Type": type, "Cache-Control": "no-store" }); res.end(typeof body === "string" ? body : JSON.stringify(body)); }
 async function body(req) { let text = ""; for await (const chunk of req) { text += chunk; if (text.length > 1_500_000) throw new Error("Request too large"); } return JSON.parse(text || "{}"); }
+function sqlite(sql) { return new Promise((resolveSql, rejectSql) => { const child = spawn("/usr/bin/sqlite3", [dbPath, sql], { stdio: ["ignore", "pipe", "pipe"] }); let output = "", error = ""; child.stdout.on("data", chunk => { output += chunk; }); child.stderr.on("data", chunk => { error += chunk; }); child.on("error", rejectSql); child.on("close", code => code === 0 ? resolveSql(output) : rejectSql(new Error(error || `sqlite3 exited with ${code}`))); }); }
+async function initDb() { await mkdir(dirname(dbPath), { recursive: true }); await sqlite("CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL);"); }
+async function readState() { const value = (await sqlite("SELECT value FROM app_state WHERE key = 'decision_lab' LIMIT 1;")).trim(); return value ? JSON.parse(Buffer.from(value, "base64").toString("utf8")) : null; }
+async function writeState(state) { const value = Buffer.from(JSON.stringify(state), "utf8").toString("base64"); await sqlite(`INSERT INTO app_state (key, value, updated_at) VALUES ('decision_lab', '${value}', datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;`); }
 function runCodex(prompt) {
   return new Promise(async (resolveRun, rejectRun) => {
     const temp = await mkdtemp(join(tmpdir(), "naming-decide-"));
@@ -49,7 +56,9 @@ async function staticFile(req, res) {
 }
 const server = http.createServer(async (req, res) => {
   try {
-    if (req.method === "GET" && req.url === "/api/health") return send(res, 200, { ok: true, bridge: "local", codex });
+    if (req.method === "GET" && req.url === "/api/health") return send(res, 200, { ok: true, bridge: "local", codex, database: dbPath, lan });
+    if (req.method === "GET" && req.url === "/api/state") return send(res, 200, { state: await readState() });
+    if (req.method === "PUT" && req.url === "/api/state") { const payload = await body(req); if (!payload.state || typeof payload.state !== "object") return send(res, 400, { error: "A state object is required." }); await writeState(payload.state); return send(res, 200, { ok: true }); }
     if (req.method === "POST" && req.url === "/api/generate") {
       const payload = await body(req);
       if (!Array.isArray(payload.ratings) || payload.ratings.length === 0) return send(res, 400, { error: "At least one rated name is required." });
@@ -59,4 +68,14 @@ const server = http.createServer(async (req, res) => {
     return staticFile(req, res);
   } catch (error) { return send(res, 500, { error: error instanceof Error ? error.message : "Generation failed" }); }
 });
-server.listen(port, "127.0.0.1", () => console.log(`Naming decision lab → http://127.0.0.1:${port}/naming/decide/`));
+await initDb();
+server.listen(port, host, () => {
+  console.log(`Naming decision lab → http://127.0.0.1:${port}/naming/decide/`);
+  console.log(`SQLite state → ${dbPath}`);
+  if (lan) {
+    const addresses = Object.values(networkInterfaces()).flat().filter(info => info && info.family === "IPv4" && !info.internal).map(info => info.address);
+    const localHost = hostname().endsWith(".local") ? hostname() : `${hostname()}.local`;
+    console.log(`Phone on the same Wi‑Fi → http://${localHost}:${port}/naming/decide/`);
+    addresses.forEach(address => console.log(`Phone fallback → http://${address}:${port}/naming/decide/`));
+  } else console.log("For iPhone access on the same Wi‑Fi, restart with: node naming/decide/bridge.mjs --lan");
+});

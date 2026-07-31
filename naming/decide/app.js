@@ -7,7 +7,8 @@ const elements = {
 const freshState = () => ({ candidates: [...window.SWIPE_SEED], ratings: [], batches: [], batch: 1, activeIds: window.SWIPE_SEED.slice(0, batchSize).map(x => x.id), nextSeed: batchSize, latestAnalysis: null });
 let state = load(); let bridgeAvailable = false; let drag = null;
 function load() { try { const parsed = JSON.parse(localStorage.getItem(storageKey)); return parsed?.candidates?.length ? parsed : freshState(); } catch { return freshState(); } }
-function save() { localStorage.setItem(storageKey, JSON.stringify(state)); }
+function bridgeHost() { return location.port === "4310" || ["localhost", "127.0.0.1"].includes(location.hostname); }
+function save() { localStorage.setItem(storageKey, JSON.stringify(state)); if (bridgeAvailable) fetch("/api/state", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state }) }).catch(() => { bridgeAvailable = false; elements.bridgeStatus.textContent = "Bridge connection lost — saved in this browser"; }); }
 function candidate(id) { return state.candidates.find(item => item.id === id); }
 function currentBatchRatings() { const ids = new Set(state.activeIds); return state.ratings.filter(item => ids.has(item.id)); }
 function currentCandidate() { const rated = new Set(currentBatchRatings().map(item => item.id)); return state.activeIds.map(candidate).find(item => item && !rated.has(item.id)); }
@@ -28,7 +29,7 @@ function rate(score) { const item = currentCandidate(); if (!item) return; state
 function undo() { state.ratings.pop(); save(); render(); }
 function nextSeedBatch() { const ids = state.candidates.filter(item => item.source === "seed").slice(state.nextSeed, state.nextSeed + batchSize).map(item => item.id); if (!ids.length) return generateMessage("Initial 200-name field is complete. Use local generation for the next batch."); state.batches.push({ batch: state.batch, reflection: elements.reflection.value.trim(), source: "seed" }); state.batch += 1; state.activeIds = ids; state.nextSeed += ids.length; elements.reflection.value = ""; save(); render(); }
 function generateMessage(message) { elements.generationMessage.textContent = message; }
-async function checkBridge() { if (!["localhost", "127.0.0.1"].includes(location.hostname)) { bridgeAvailable = false; elements.bridgeStatus.textContent = "Local generation is available at localhost"; return; } try { const r = await fetch("/api/health", { cache: "no-store" }); if (!r.ok) throw new Error(); bridgeAvailable = true; elements.bridgeStatus.textContent = "Local Codex bridge ready"; } catch { bridgeAvailable = false; elements.bridgeStatus.textContent = "Bridge unavailable"; } }
+async function checkBridge() { if (!bridgeHost()) { bridgeAvailable = false; elements.bridgeStatus.textContent = "Local generation is available at localhost"; return; } try { const [health, stored] = await Promise.all([fetch("/api/health", { cache: "no-store" }), fetch("/api/state", { cache: "no-store" })]); if (!health.ok || !stored.ok) throw new Error(); bridgeAvailable = true; const remote = await stored.json(); if (remote.state?.candidates?.length) { state = remote.state; localStorage.setItem(storageKey, JSON.stringify(state)); } else save(); elements.bridgeStatus.textContent = "Local Codex + shared SQLite ready"; } catch { bridgeAvailable = false; elements.bridgeStatus.textContent = "Bridge unavailable"; } }
 async function generate() {
   if (!bridgeAvailable) return generateMessage("Run `node naming/decide/bridge.mjs`, then open http://127.0.0.1:4310/naming/decide/. Vercel cannot access your local Codex CLI.");
   elements.generate.disabled = true; generateMessage("Codex is analyzing this batch and drafting 20 new names…");
@@ -42,4 +43,4 @@ elements.card.addEventListener("pointerdown", event => { drag = { x: event.clien
 elements.card.addEventListener("pointermove", event => { if (!drag) return; const dx = event.clientX - drag.x, dy = event.clientY - drag.y; elements.card.style.transform = `translate(${dx}px,${dy}px) rotate(${dx / 22}deg)`; });
 elements.card.addEventListener("pointerup", event => { if (!drag) return; const dx = event.clientX - drag.x, dy = event.clientY - drag.y; drag = null; if (Math.hypot(dx, dy) < 55) return render(); rate(scoreForPoint(event.clientX, event.clientY)); });
 window.addEventListener("keydown", event => { if (["2","3","4","5"].includes(event.key) && !elements.batchComplete.hidden) return; if (["2","3","4","5"].includes(event.key)) rate(Number(event.key)); if (event.key.toLowerCase() === "z" && (event.metaKey || event.ctrlKey)) undo(); });
-checkBridge(); render();
+checkBridge().finally(render);
