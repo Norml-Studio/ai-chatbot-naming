@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="A local naming-decision lab for reviewing and learning from name ratings." />
-    <title>Naming Decision Lab</title>
+    <meta name="description" content="A local decision lab that learns from your ratings." />
+    <title>Decinder</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header><a href="/naming/">← Naming field</a><p>Naming decision lab <span id="bridge-status">Checking local bridge…</span></p><div class="header-actions"><a class="results-link" href="/naming/decide/results/">Results <span id="results-count">0</span></a><button id="reset" type="button">Reset local data</button></div></header>
+    <header><a href="/naming/decide/">Decinder</a><p>Decision lab <span id="bridge-status">Checking local bridge…</span></p><div class="header-actions"><a class="results-link" href="/naming/decide/results/">Results <span id="results-count">0</span></a><button id="reset" type="button">Reset local data</button></div></header>
     <main>
       <section class="intro"><div><p class="label">Batch <span id="batch-number">01</span></p><h1>Rate the pull,<br />not just the name.</h1></div><p>Swipe diagonally, or use the score controls. Your decisions stay on this device. Every completed 20-name batch can teach the next one.</p></section>
       <section class="lab" aria-label="Name rating area">
@@ -20,13 +20,13 @@
           <div class="quadrant q3">3<br /><small>no</small></div><div class="quadrant q4">4<br /><small>yes</small></div><div class="quadrant q2">2<br /><small>strong no</small></div><div class="quadrant q5">5<br /><small>strong yes</small></div>
           <article id="card" class="card" tabindex="0"><p class="card-territory" id="card-territory"></p><h2 id="card-name"></h2><p id="card-description"></p><small id="card-source"></small></article>
         </div>
-        <div class="score-controls"><button data-score="2" type="button"><b>2</b><span>Strong no</span></button><button data-score="3" type="button"><b>3</b><span>No</span></button><button data-score="4" type="button"><b>4</b><span>Yes</span></button><button data-score="5" type="button"><b>5</b><span>Strong yes</span></button></div>
-        <p class="gesture-note">Upper left = 3 · upper right = 4 · lower left = 2 · lower right = 5</p>
+        <div class="score-controls"><button data-score="2" type="button"><b>2</b><span>Strong no</span><i aria-hidden="true">↙</i></button><button data-score="3" type="button"><b>3</b><span>No</span><i aria-hidden="true">↖</i></button><button data-score="4" type="button"><b>4</b><span>Yes</span><i aria-hidden="true">↗</i></button><button data-score="5" type="button"><b>5</b><span>Strong yes</span><i aria-hidden="true">↘</i></button></div>
+        <p class="gesture-note">Swipe a corner or tap a choice · 2–5 keys work on desktop</p>
       </section>
       <section id="batch-complete" class="batch-complete" hidden>
-        <p class="label">Batch complete</p><h2>Tell the next batch what the scores missed.</h2><textarea id="reflection" placeholder="What felt right or wrong? What do you want more or less of?"></textarea>
+        <p class="label">Batch complete</p><h2>Tell the next batch what the scores missed.</h2><div class="reflection-field"><textarea id="reflection" placeholder="What felt right or wrong? What do you want more or less of?"></textarea><button id="dictate" type="button" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 15.6a3.6 3.6 0 0 0 3.6-3.6V6.6a3.6 3.6 0 0 0-7.2 0V12a3.6 3.6 0 0 0 3.6 3.6Zm6-3.6a6 6 0 0 1-12 0M12 18v3" /></svg><span id="dictate-label">Dictate</span></button></div><p id="dictation-message" class="dictation-message" aria-live="polite"></p>
         <div class="batch-actions"><button id="generate" type="button">Analyze &amp; generate 20</button><button id="continue-seed" class="quiet" type="button">Continue with seed names</button></div>
-        <p id="generation-message"></p><article id="analysis" hidden><h3>What the model heard</h3><p id="analysis-text"></p><div id="analysis-tags"></div></article>
+        <div id="generating" class="generating" role="status" aria-live="polite" hidden><i aria-hidden="true"></i><div><strong>Codex is shaping the next batch.</strong><p>It is reading your scores and reflection. Keep this page open while it works.</p></div></div><p id="generation-message"></p><article id="analysis" hidden><h3>What the model heard</h3><p id="analysis-text"></p><div id="analysis-tags"></div></article>
       </section>
       <section class="history"><div><p class="label">Decision record</p><h2>Everything you rated.</h2></div><div class="history-stats" id="stats"></div><div class="history-list" id="history-list"></div></section>
     </main>

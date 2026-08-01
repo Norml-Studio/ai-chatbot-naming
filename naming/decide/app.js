@@ -2,10 +2,10 @@ const storageKey = "naming-decision-lab:v1";
 const batchSize = 20;
 const $ = id => document.getElementById(id);
 const elements = {
-  bridgeStatus: $("bridge-status"), resultsCount: $("results-count"), batchNumber: $("batch-number"), progressText: $("progress-text"), progressBar: $("progress-bar"), undo: $("undo"), deck: $("deck"), card: $("card"), cardTerritory: $("card-territory"), cardName: $("card-name"), cardDescription: $("card-description"), cardSource: $("card-source"), batchComplete: $("batch-complete"), reflection: $("reflection"), generate: $("generate"), continueSeed: $("continue-seed"), generationMessage: $("generation-message"), analysis: $("analysis"), analysisText: $("analysis-text"), analysisTags: $("analysis-tags"), stats: $("stats"), historyList: $("history-list"), reset: $("reset")
+  bridgeStatus: $("bridge-status"), resultsCount: $("results-count"), batchNumber: $("batch-number"), progressText: $("progress-text"), progressBar: $("progress-bar"), undo: $("undo"), deck: $("deck"), card: $("card"), cardTerritory: $("card-territory"), cardName: $("card-name"), cardDescription: $("card-description"), cardSource: $("card-source"), batchComplete: $("batch-complete"), reflection: $("reflection"), dictate: $("dictate"), dictateLabel: $("dictate-label"), dictationMessage: $("dictation-message"), generate: $("generate"), continueSeed: $("continue-seed"), generating: $("generating"), generationMessage: $("generation-message"), analysis: $("analysis"), analysisText: $("analysis-text"), analysisTags: $("analysis-tags"), stats: $("stats"), historyList: $("history-list"), reset: $("reset")
 };
 const freshState = () => ({ candidates: [...window.SWIPE_SEED], ratings: [], batches: [], batch: 1, activeIds: window.SWIPE_SEED.slice(0, batchSize).map(x => x.id), nextSeed: batchSize, latestAnalysis: null });
-let state = load(); let bridgeAvailable = false; let drag = null;
+let state = load(); let bridgeAvailable = false; let drag = null; let isTransitioning = false; let recognition = null; let isDictating = false; let scoreFilter = null;
 function load() { try { const parsed = JSON.parse(localStorage.getItem(storageKey)); return parsed?.candidates?.length ? parsed : freshState(); } catch { return freshState(); } }
 function bridgeHost() { return location.port === "4310"; }
 function save() { localStorage.setItem(storageKey, JSON.stringify(state)); if (bridgeAvailable) fetch("/api/state", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state }) }).catch(() => { bridgeAvailable = false; elements.bridgeStatus.textContent = "Bridge connection lost — saved in this browser"; }); }
@@ -22,26 +22,51 @@ function render() {
   renderHistory(); renderAnalysis();
 }
 function renderHistory() {
-  const counts = [2,3,4,5].map(score => state.ratings.filter(item => item.score === score).length); elements.stats.replaceChildren(...counts.map((count, i) => { const tag = document.createElement("span"); tag.textContent = `${i + 2}: ${count}`; return tag; })); elements.historyList.replaceChildren();
-  [...state.ratings].reverse().forEach(rating => { const item = candidate(rating.id); if (!item) return; const node = document.getElementById("history-row").content.cloneNode(true); node.querySelector(".history-score").textContent = rating.score; node.querySelector("h3").textContent = item.name; node.querySelector("p").textContent = item.description; node.querySelector("small").textContent = item.territory; elements.historyList.appendChild(node); });
+  const counts = [2,3,4,5].map(score => state.ratings.filter(item => item.score === score).length);
+  elements.stats.replaceChildren(...counts.map((count, i) => { const score = i + 2; const tag = document.createElement("button"); tag.type = "button"; tag.className = scoreFilter === score ? "is-active" : ""; tag.setAttribute("aria-pressed", String(scoreFilter === score)); tag.textContent = `${score}: ${count}`; tag.title = `Show only ratings scored ${score}`; tag.addEventListener("click", () => { scoreFilter = scoreFilter === score ? null : score; renderHistory(); }); return tag; }));
+  elements.historyList.replaceChildren();
+  [...state.ratings].reverse().filter(rating => scoreFilter === null || rating.score === scoreFilter).forEach(rating => { const item = candidate(rating.id); if (!item) return; const node = document.getElementById("history-row").content.cloneNode(true); node.querySelector(".history-score").textContent = rating.score; node.querySelector("h3").textContent = item.name; node.querySelector("p").textContent = item.description; node.querySelector("small").textContent = item.territory; elements.historyList.appendChild(node); });
 }
 function renderAnalysis() { const data = state.latestAnalysis; elements.analysis.hidden = !data; if (!data) return; elements.analysisText.textContent = data.analysis; elements.analysisTags.replaceChildren(...[...(data.likes || []), ...(data.avoids || []).map(x => `Avoid: ${x}`)].map(text => { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = text; return tag; })); }
-function rate(score) { const item = currentCandidate(); if (!item) return; state.ratings.push({ id: item.id, score, at: new Date().toISOString(), batch: state.batch }); save(); render(); }
+function scoreExit(score) { return ({ 2: [-34, 24, -8], 3: [-34, -24, -8], 4: [34, -24, 8], 5: [34, 24, 8] })[score]; }
+function setScoreControls(disabled) { document.querySelectorAll("[data-score]").forEach(button => button.disabled = disabled); }
+function rate(score) {
+  const item = currentCandidate(); if (!item || isTransitioning) return;
+  isTransitioning = true; setScoreControls(true);
+  const [x, y, rotate] = scoreExit(score); elements.card.classList.add("is-leaving"); elements.card.style.transform = `translate(${x}vw,${y}vh) rotate(${rotate}deg)`;
+  window.setTimeout(() => { state.ratings.push({ id: item.id, score, at: new Date().toISOString(), batch: state.batch }); save(); render(); elements.card.classList.remove("is-leaving"); elements.card.classList.add("is-entering"); requestAnimationFrame(() => elements.card.classList.remove("is-entering")); isTransitioning = false; setScoreControls(false); }, 165);
+}
 function undo() { state.ratings.pop(); save(); render(); }
 function nextSeedBatch() { const ids = state.candidates.filter(item => item.source === "seed").slice(state.nextSeed, state.nextSeed + batchSize).map(item => item.id); if (!ids.length) return generateMessage("Initial 200-name field is complete. Use local generation for the next batch."); state.batches.push({ batch: state.batch, reflection: elements.reflection.value.trim(), source: "seed" }); state.batch += 1; state.activeIds = ids; state.nextSeed += ids.length; elements.reflection.value = ""; save(); render(); }
 function generateMessage(message) { elements.generationMessage.textContent = message; }
 async function checkBridge() { if (!bridgeHost()) { bridgeAvailable = false; elements.bridgeStatus.textContent = "Local generation is available at localhost"; return; } try { const [health, stored] = await Promise.all([fetch("/api/health", { cache: "no-store" }), fetch("/api/state", { cache: "no-store" })]); if (!health.ok || !stored.ok) throw new Error(); bridgeAvailable = true; const remote = await stored.json(); if (remote.state?.candidates?.length) { state = remote.state; localStorage.setItem(storageKey, JSON.stringify(state)); } else save(); elements.bridgeStatus.textContent = "Local Codex + shared SQLite ready"; } catch { bridgeAvailable = false; elements.bridgeStatus.textContent = "Bridge unavailable"; } }
 async function generate() {
   if (!bridgeAvailable) return generateMessage("Run `node naming/decide/bridge.mjs`, then open http://127.0.0.1:4310/naming/decide/. Vercel cannot access your local Codex CLI.");
-  elements.generate.disabled = true; generateMessage("Codex is analyzing this batch and drafting 20 new names…");
+  stopDictation(); elements.generate.disabled = true; elements.continueSeed.disabled = true; elements.generating.hidden = false; elements.generate.textContent = "Analyzing…"; generateMessage("Codex is analyzing this batch and drafting 20 new names…");
   const ratings = state.ratings.map(rating => { const item = candidate(rating.id); return { name: item.name, territory: item.territory, description: item.description, score: rating.score, batch: rating.batch }; });
   try { const r = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ratings, reflection: elements.reflection.value.trim(), count: 20 }) }); const result = await r.json(); if (!r.ok) throw new Error(result.error || "Generation failed");
     const generated = result.names.map((item, index) => ({ id: `generated-${Date.now()}-${index}`, ...item, source: "generated" })); state.candidates.push(...generated); state.batches.push({ batch: state.batch, reflection: elements.reflection.value.trim(), source: "codex", analysis: result.analysis }); state.latestAnalysis = result; state.batch += 1; state.activeIds = generated.map(item => item.id); elements.reflection.value = ""; save(); render(); generateMessage("New 20-name batch is ready.");
-  } catch (error) { generateMessage(error instanceof Error ? error.message : "Generation failed"); } finally { elements.generate.disabled = false; }
+  } catch (error) { generateMessage(error instanceof Error ? error.message : "Generation failed"); } finally { elements.generating.hidden = true; elements.generate.disabled = false; elements.continueSeed.disabled = false; elements.generate.textContent = "Analyze & generate 20"; }
+}
+function speechRecognition() { return window.SpeechRecognition || window.webkitSpeechRecognition; }
+function stopDictation() { if (recognition) recognition.stop(); }
+function setupDictation() {
+  const Recognition = speechRecognition();
+  if (!Recognition) { elements.dictate.disabled = true; elements.dictationMessage.textContent = "Dictation is not available in this browser. You can still type your reflection."; return; }
+  elements.dictate.addEventListener("click", () => {
+    if (isDictating) return stopDictation();
+    const initial = elements.reflection.value.trim(); let finalText = ""; let interimText = "";
+    recognition = new Recognition(); recognition.continuous = true; recognition.interimResults = true; recognition.lang = navigator.language || "en-US";
+    recognition.onstart = () => { isDictating = true; elements.dictate.setAttribute("aria-pressed", "true"); elements.dictateLabel.textContent = "Listening…"; elements.dictationMessage.textContent = "Listening. Tap again when you are done."; };
+    recognition.onresult = event => { for (let i = event.resultIndex; i < event.results.length; i += 1) { const text = event.results[i][0].transcript.trim(); if (event.results[i].isFinal) finalText += `${finalText ? " " : ""}${text}`; else interimText = text; } elements.reflection.value = [initial, finalText, interimText].filter(Boolean).join(initial && (finalText || interimText) ? " " : ""); };
+    recognition.onerror = event => { elements.dictationMessage.textContent = event.error === "not-allowed" ? "Microphone permission was not granted." : "Dictation stopped. You can type instead."; };
+    recognition.onend = () => { isDictating = false; elements.dictate.setAttribute("aria-pressed", "false"); elements.dictateLabel.textContent = "Dictate"; if (!elements.dictationMessage.textContent) elements.dictationMessage.textContent = "Dictation added to your reflection."; recognition = null; };
+    recognition.start();
+  });
 }
 document.querySelectorAll("[data-score]").forEach(button => button.addEventListener("click", () => rate(Number(button.dataset.score)))); elements.undo.addEventListener("click", undo); elements.continueSeed.addEventListener("click", nextSeedBatch); elements.generate.addEventListener("click", generate); elements.reset.addEventListener("click", () => { if (confirm("Clear all ratings, batches, and generated names on this device?")) { state = freshState(); save(); render(); } });
-elements.card.addEventListener("pointerdown", event => { drag = { x: event.clientX, y: event.clientY }; elements.card.setPointerCapture(event.pointerId); });
-elements.card.addEventListener("pointermove", event => { if (!drag) return; const dx = event.clientX - drag.x, dy = event.clientY - drag.y; elements.card.style.transform = `translate(${dx}px,${dy}px) rotate(${dx / 22}deg)`; });
-elements.card.addEventListener("pointerup", event => { if (!drag) return; const dx = event.clientX - drag.x, dy = event.clientY - drag.y; drag = null; if (Math.hypot(dx, dy) < 55) return render(); rate(scoreForPoint(event.clientX, event.clientY)); });
+elements.card.addEventListener("pointerdown", event => { if (isTransitioning) return; drag = { x: event.clientX, y: event.clientY }; elements.card.setPointerCapture(event.pointerId); });
+elements.card.addEventListener("pointermove", event => { if (!drag || isTransitioning) return; const dx = event.clientX - drag.x, dy = event.clientY - drag.y; elements.card.style.transform = `translate(${dx}px,${dy}px) rotate(${dx / 22}deg)`; });
+elements.card.addEventListener("pointerup", event => { if (!drag || isTransitioning) return; const dx = event.clientX - drag.x, dy = event.clientY - drag.y; drag = null; if (Math.hypot(dx, dy) < 55) return render(); rate(scoreForPoint(event.clientX, event.clientY)); });
 window.addEventListener("keydown", event => { if (["2","3","4","5"].includes(event.key) && !elements.batchComplete.hidden) return; if (["2","3","4","5"].includes(event.key)) rate(Number(event.key)); if (event.key.toLowerCase() === "z" && (event.metaKey || event.ctrlKey)) undo(); });
-checkBridge().finally(render);
+setupDictation(); checkBridge().finally(render);
