@@ -2,6 +2,7 @@ const storageKey = "naming-decision-lab:v1";
 const $ = id => document.getElementById(id);
 const bridgeHost = () => location.port === "4310";
 function localState() { try { return JSON.parse(localStorage.getItem(storageKey)); } catch { return null; } }
+function activeDecision(raw) { return raw?.version === 2 ? raw.decisions?.find(item => item.id === raw.activeId) || raw.decisions?.[0] : raw; }
 async function getState() {
   if (!bridgeHost()) return localState();
   try { const response = await fetch("/api/state", { cache: "no-store" }); const remote = await response.json(); return remote.state || localState(); } catch { return localState(); }
@@ -35,4 +36,4 @@ function render(state) {
   if (state.latestAnalysis) { $("model-analysis").hidden = false; $("analysis-text").textContent = state.latestAnalysis.analysis; const tags = [...(state.latestAnalysis.likes || []), ...(state.latestAnalysis.avoids || []).map(item => `Avoid: ${item}`)]; $("analysis-tags").replaceChildren(...tags.map(text => { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = text; return tag; })); }
   $("results").hidden = false;
 }
-getState().then(state => { if (state?.ratings?.length) render(state); else $("empty").hidden = false; });
+getState().then(raw => { const state = activeDecision(raw); if (state?.ratings?.length) render(state); else $("empty").hidden = false; });

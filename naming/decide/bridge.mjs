@@ -23,6 +23,12 @@ function sqlite(sql) { return new Promise((resolveSql, rejectSql) => { const chi
 async function initDb() { await mkdir(dirname(dbPath), { recursive: true }); await sqlite("CREATE TABLE IF NOT EXISTS app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL);"); }
 async function readState() { const value = (await sqlite("SELECT value FROM app_state WHERE key = 'decision_lab' LIMIT 1;")).trim(); return value ? JSON.parse(Buffer.from(value, "base64").toString("utf8")) : null; }
 async function writeState(state) { const value = Buffer.from(JSON.stringify(state), "utf8").toString("base64"); await sqlite(`INSERT INTO app_state (key, value, updated_at) VALUES ('decision_lab', '${value}', datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at;`); }
+function decisionId() { return `decision-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
+function workspaceFrom(raw) {
+  if (raw?.version === 2 && Array.isArray(raw.decisions)) return raw;
+  if (raw?.candidates?.length) return { version: 2, activeId: "chatbot-naming", decisions: [{ id: "chatbot-naming", title: "AI assistant naming", brief: "Find a clear, distinctive product name for a WordPress-first AI assistant for website visitors.", kind: "naming", createdAt: new Date().toISOString(), ...raw }] };
+  return { version: 2, activeId: null, decisions: [] };
+}
 function runCodex(prompt) {
   return new Promise(async (resolveRun, rejectRun) => {
     const temp = await mkdtemp(join(tmpdir(), "naming-decide-"));
@@ -43,7 +49,9 @@ function runCodex(prompt) {
   });
 }
 function createPrompt(payload) {
-  return `You are helping name a WordPress-first AI assistant for website visitors. The user rates names 2–5: 2 = strong no, 3 = no, 4 = yes, 5 = strong yes. Analyze the user's demonstrated naming preference. Do not claim trademark or domain availability. Avoid names already rated 2 or 3 and avoid close variants. Generate exactly ${payload.count || 20} fresh names. The user’s batch reflection is: ${JSON.stringify(payload.reflection || "No extra notes.")}\n\nRated candidates:\n${JSON.stringify(payload.ratings || [])}\n\nReturn only JSON matching the provided schema. The descriptions should explain the semantic/sound territory in a single concise sentence.`;
+  if (payload.mode === "seed") return `You are setting up a Decinder decision session. Create exactly ${payload.count || 20} short, deliberately varied cards for this decision. Each card must be a genuine option the user can rate 2–5, not an explanation, question, or minor rewrite of another card. Use the schema's name field for the card text, territory field for the distinct angle or trade-off, and description for one concise explanation. Do not make claims about legal clearance, factual certainty, or market validation.\n\nDecision title: ${JSON.stringify(payload.title)}\nDecision brief: ${JSON.stringify(payload.brief)}\n\nReturn only JSON matching the provided schema.`;
+  const decision = payload.decision ? `You are helping with this Decinder decision: ${JSON.stringify(payload.decision.title)}. Decision brief: ${JSON.stringify(payload.decision.brief)}.` : "You are helping name a WordPress-first AI assistant for website visitors.";
+  return `${decision} The user rates cards 2–5: 2 = strong no, 3 = no, 4 = yes, 5 = strong yes. Analyze the user's demonstrated preference. Do not claim trademark or domain availability. Avoid cards already rated 2 or 3 and avoid close variants. Generate exactly ${payload.count || 20} fresh cards. The user’s batch reflection is: ${JSON.stringify(payload.reflection || "No extra notes.")}\n\nRated candidates:\n${JSON.stringify(payload.ratings || [])}\n\nReturn only JSON matching the provided schema. The descriptions should explain the territory or trade-off in a single concise sentence.`;
 }
 async function staticFile(req, res) {
   const url = new URL(req.url, "http://localhost");
@@ -64,6 +72,18 @@ const server = http.createServer(async (req, res) => {
       if (!Array.isArray(payload.ratings) || payload.ratings.length === 0) return send(res, 400, { error: "At least one rated name is required." });
       const result = await runCodex(createPrompt(payload));
       return send(res, 200, result);
+    }
+    if (req.method === "POST" && req.url === "/api/decisions") {
+      const payload = await body(req);
+      const title = typeof payload.title === "string" ? payload.title.trim() : "";
+      const brief = typeof payload.brief === "string" ? payload.brief.trim() : "";
+      if (!title || !brief) return send(res, 400, { error: "A title and decision brief are required." });
+      const result = await runCodex(createPrompt({ mode: "seed", title, brief, count: payload.count || 20 }));
+      const workspace = workspaceFrom(await readState());
+      const id = decisionId(); const createdAt = new Date().toISOString();
+      const decision = { id, title, brief, kind: "decision", createdAt, candidates: result.names.map((item, index) => ({ id: `${id}-card-${index + 1}`, ...item, source: "generated" })), ratings: [], batches: [], batch: 1, activeIds: [], nextSeed: 20, latestAnalysis: { ...result, analysis: result.analysis || "Initial batch created from the decision brief." } };
+      decision.activeIds = decision.candidates.map(item => item.id); workspace.decisions.push(decision); workspace.activeId = id; await writeState(workspace);
+      return send(res, 200, { decision, workspace });
     }
     return staticFile(req, res);
   } catch (error) { return send(res, 500, { error: error instanceof Error ? error.message : "Generation failed" }); }

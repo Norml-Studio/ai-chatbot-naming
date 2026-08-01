@@ -11,9 +11,10 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header><a href="/naming/decide/">Decinder</a><p>Decision lab <span id="bridge-status">Checking local bridge…</span></p><div class="header-actions"><a class="results-link" href="/naming/decide/results/">Results <span id="results-count">0</span></a><button id="reset" type="button">Reset local data</button></div></header>
+    <header><a href="/naming/decide/">Decinder</a><p id="active-decision-title">Decision lab <span id="bridge-status">Checking local bridge…</span></p><div class="header-actions"><button id="decisions-toggle" class="decisions-toggle" type="button">Decisions <span id="decision-count">1</span></button><a class="results-link" href="/naming/decide/results/">Results <span id="results-count">0</span></a><button id="reset" type="button">Reset this decision</button></div></header>
+    <dialog id="decision-dialog" aria-labelledby="decision-dialog-title"><div class="dialog-head"><div><p class="label">Decinder workspace</p><h2 id="decision-dialog-title">Your decisions</h2></div><button id="close-decisions" type="button" aria-label="Close decisions">×</button></div><div id="decision-list" class="decision-list"></div><form id="new-decision-form" class="new-decision-form"><p class="label">New decision</p><label>Title<input id="new-decision-title" name="title" required maxlength="70" placeholder="e.g. Norml Studio tagline" /></label><label>What should the cards help decide?<textarea id="new-decision-brief" name="brief" required placeholder="Describe the choice, audience, context, and anything to avoid."></textarea></label><button id="create-decision" type="submit">Create 20 cards</button><p id="new-decision-message" aria-live="polite"></p></form></dialog>
     <main>
-      <section class="intro"><div><p class="label">Batch <span id="batch-number">01</span></p><h1>Rate the pull,<br />not just the name.</h1></div><p>Swipe diagonally, or use the score controls. Your decisions stay on this device. Every completed 20-name batch can teach the next one.</p></section>
+      <section class="intro"><div><p class="label" id="decision-kind">Naming direction · Batch <span id="batch-number">01</span></p><h1 id="decision-heading">Rate the pull,<br />not just the name.</h1></div><p id="decision-brief">Swipe diagonally, or use the score controls. Your decisions stay on this device. Every completed 20-name batch can teach the next one.</p></section>
       <section class="lab" aria-label="Name rating area">
         <div class="progress"><span id="progress-text">1 of 20</span><div><i id="progress-bar"></i></div><button id="undo" type="button" disabled>Undo</button></div>
         <div id="deck" class="deck">
@@ -31,6 +32,6 @@
       <section class="history"><div><p class="label">Decision record</p><h2>Everything you rated.</h2></div><div class="history-stats" id="stats"></div><div class="history-list" id="history-list"></div></section>
     </main>
     <template id="history-row"><article><span class="history-score"></span><div><h3></h3><p></p></div><small></small></article></template>
-    <script src="./seed.js"></script><script src="./app.js"></script>
+    <script src="./seed.js"></script><script src="./imports.js"></script><script src="./app.js"></script>
   </body>
 </html>
