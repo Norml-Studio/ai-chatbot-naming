@@ -2,12 +2,12 @@ const storageKey = "naming-decision-lab:v1";
 const batchSize = 20;
 const $ = id => document.getElementById(id);
 const elements = {
-  bridgeStatus: $("bridge-status"), batchNumber: $("batch-number"), progressText: $("progress-text"), progressBar: $("progress-bar"), undo: $("undo"), deck: $("deck"), card: $("card"), cardTerritory: $("card-territory"), cardName: $("card-name"), cardDescription: $("card-description"), cardSource: $("card-source"), batchComplete: $("batch-complete"), reflection: $("reflection"), generate: $("generate"), continueSeed: $("continue-seed"), generationMessage: $("generation-message"), analysis: $("analysis"), analysisText: $("analysis-text"), analysisTags: $("analysis-tags"), stats: $("stats"), historyList: $("history-list"), reset: $("reset")
+  bridgeStatus: $("bridge-status"), resultsCount: $("results-count"), batchNumber: $("batch-number"), progressText: $("progress-text"), progressBar: $("progress-bar"), undo: $("undo"), deck: $("deck"), card: $("card"), cardTerritory: $("card-territory"), cardName: $("card-name"), cardDescription: $("card-description"), cardSource: $("card-source"), batchComplete: $("batch-complete"), reflection: $("reflection"), generate: $("generate"), continueSeed: $("continue-seed"), generationMessage: $("generation-message"), analysis: $("analysis"), analysisText: $("analysis-text"), analysisTags: $("analysis-tags"), stats: $("stats"), historyList: $("history-list"), reset: $("reset")
 };
 const freshState = () => ({ candidates: [...window.SWIPE_SEED], ratings: [], batches: [], batch: 1, activeIds: window.SWIPE_SEED.slice(0, batchSize).map(x => x.id), nextSeed: batchSize, latestAnalysis: null });
 let state = load(); let bridgeAvailable = false; let drag = null;
 function load() { try { const parsed = JSON.parse(localStorage.getItem(storageKey)); return parsed?.candidates?.length ? parsed : freshState(); } catch { return freshState(); } }
-function bridgeHost() { return location.port === "4310" || ["localhost", "127.0.0.1"].includes(location.hostname); }
+function bridgeHost() { return location.port === "4310"; }
 function save() { localStorage.setItem(storageKey, JSON.stringify(state)); if (bridgeAvailable) fetch("/api/state", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state }) }).catch(() => { bridgeAvailable = false; elements.bridgeStatus.textContent = "Bridge connection lost — saved in this browser"; }); }
 function candidate(id) { return state.candidates.find(item => item.id === id); }
 function currentBatchRatings() { const ids = new Set(state.activeIds); return state.ratings.filter(item => ids.has(item.id)); }
@@ -15,6 +15,7 @@ function currentCandidate() { const rated = new Set(currentBatchRatings().map(it
 function scoreForPoint(x, y) { const rect = elements.deck.getBoundingClientRect(); const right = x > rect.left + rect.width / 2; const bottom = y > rect.top + rect.height / 2; return bottom ? (right ? 5 : 2) : (right ? 4 : 3); }
 function render() {
   const done = currentBatchRatings().length; const item = currentCandidate();
+  elements.resultsCount.textContent = state.ratings.length;
   elements.batchNumber.textContent = String(state.batch).padStart(2, "0"); elements.progressText.textContent = `${Math.min(done + 1, batchSize)} of ${batchSize}`; elements.progressBar.style.width = `${(done / batchSize) * 100}%`; elements.undo.disabled = state.ratings.length === 0;
   elements.batchComplete.hidden = done < batchSize; elements.deck.parentElement.hidden = done >= batchSize;
   if (item) { elements.cardTerritory.textContent = item.territory; elements.cardName.textContent = item.name; elements.cardDescription.textContent = item.description; elements.cardSource.textContent = item.source === "generated" ? "Generated from your previous ratings" : "Initial naming field"; elements.card.style.transform = "translate(0,0) rotate(0)"; }
