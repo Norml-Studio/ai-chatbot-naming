@@ -16,6 +16,7 @@ const lan = process.argv.includes("--lan");
 const host = lan ? "0.0.0.0" : "127.0.0.1";
 const dbPath = process.env.NAMING_DB_PATH || join(homedir(), "Library", "Application Support", "Norml Studio", "Naming Decision Lab", "decision-lab.sqlite");
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".css": "text/css; charset=utf-8", ".png": "image/png", ".svg": "image/svg+xml" };
+const generationJobs = new Map();
 
 function send(res, code, body, type = "application/json; charset=utf-8") { res.writeHead(code, { "Content-Type": type, "Cache-Control": "no-store" }); res.end(typeof body === "string" ? body : JSON.stringify(body)); }
 async function body(req) { let text = ""; for await (const chunk of req) { text += chunk; if (text.length > 1_500_000) throw new Error("Request too large"); } return JSON.parse(text || "{}"); }
@@ -28,6 +29,25 @@ function workspaceFrom(raw) {
   if (raw?.version === 2 && Array.isArray(raw.decisions)) return raw;
   if (raw?.candidates?.length) return { version: 2, activeId: "chatbot-naming", decisions: [{ id: "chatbot-naming", title: "AI assistant naming", brief: "Find a clear, distinctive product name for a WordPress-first AI assistant for website visitors.", kind: "naming", createdAt: new Date().toISOString(), ...raw }] };
   return { version: 2, activeId: null, decisions: [] };
+}
+async function persistGeneration(payload, result) {
+  const stamp = Date.now();
+  const candidates = result.names.map((item, index) => ({ id: `${payload.decisionId || "decision"}-generated-${stamp}-${index + 1}`, ...item, source: "generated" }));
+  if (!payload.decisionId || !payload.runId) return candidates;
+  const workspace = workspaceFrom(await readState());
+  const decision = workspace.decisions.find(item => item.id === payload.decisionId);
+  if (!decision || decision.prefetch?.runId !== payload.runId) return candidates;
+  decision.prefetch = { ...decision.prefetch, status: "ready", candidates, analysis: result, readyAt: new Date().toISOString() };
+  await writeState(workspace);
+  return candidates;
+}
+async function persistGenerationError(payload, error) {
+  if (!payload.decisionId || !payload.runId) return;
+  const workspace = workspaceFrom(await readState());
+  const decision = workspace.decisions.find(item => item.id === payload.decisionId);
+  if (!decision || decision.prefetch?.runId !== payload.runId) return;
+  decision.prefetch = { ...decision.prefetch, status: "error", error: error instanceof Error ? error.message : "Generation failed" };
+  await writeState(workspace);
 }
 function runCodex(prompt) {
   return new Promise(async (resolveRun, rejectRun) => {
@@ -49,9 +69,9 @@ function runCodex(prompt) {
   });
 }
 function createPrompt(payload) {
-  if (payload.mode === "seed") return `You are setting up a Decinder decision session. Create exactly ${payload.count || 20} short, deliberately varied cards for this decision. Each card must be a genuine option the user can rate 2–5, not an explanation, question, or minor rewrite of another card. Use the schema's name field for the card text, territory field for the distinct angle or trade-off, and description for one concise explanation. Do not make claims about legal clearance, factual certainty, or market validation.\n\nDecision title: ${JSON.stringify(payload.title)}\nDecision brief: ${JSON.stringify(payload.brief)}\n\nReturn only JSON matching the provided schema.`;
+  if (payload.mode === "seed") return `You are setting up a Decinder decision session. Create exactly ${payload.count || 30} short, deliberately varied cards for this decision. Each card must be a genuine option the user can rate 2–5, not an explanation, question, or minor rewrite of another card. Use the schema's name field for the card text, territory field for the distinct angle or trade-off, and description for one concise explanation. Do not make claims about legal clearance, factual certainty, or market validation.\n\nDecision title: ${JSON.stringify(payload.title)}\nDecision brief: ${JSON.stringify(payload.brief)}\n\nReturn only JSON matching the provided schema.`;
   const decision = payload.decision ? `You are helping with this Decinder decision: ${JSON.stringify(payload.decision.title)}. Decision brief: ${JSON.stringify(payload.decision.brief)}.` : "You are helping name a WordPress-first AI assistant for website visitors.";
-  return `${decision} The user rates cards 2–5: 2 = strong no, 3 = no, 4 = yes, 5 = strong yes. Analyze the user's demonstrated preference. Do not claim trademark or domain availability. Avoid cards already rated 2 or 3 and avoid close variants. Generate exactly ${payload.count || 20} fresh cards. The user’s batch reflection is: ${JSON.stringify(payload.reflection || "No extra notes.")}\n\nRated candidates:\n${JSON.stringify(payload.ratings || [])}\n\nReturn only JSON matching the provided schema. The descriptions should explain the territory or trade-off in a single concise sentence.`;
+  return `${decision} The user rates cards 2–5: 2 = strong no, 3 = no, 4 = yes, 5 = strong yes. Analyze the user's demonstrated preference. Do not claim trademark or domain availability. Avoid cards already rated 2 or 3 and avoid close variants. Generate exactly ${payload.count || 30} fresh cards for the next Decinder cycle: 20 core cards followed by a 10-card buffer. The user’s batch reflection is: ${JSON.stringify(payload.reflection || "No extra notes.")}\n\nRated candidates:\n${JSON.stringify(payload.ratings || [])}\n\nReturn only JSON matching the provided schema. The descriptions should explain the territory or trade-off in a single concise sentence.`;
 }
 async function staticFile(req, res) {
   const url = new URL(req.url, "http://localhost");
@@ -70,18 +90,41 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST" && req.url === "/api/generate") {
       const payload = await body(req);
       if (!Array.isArray(payload.ratings) || payload.ratings.length === 0) return send(res, 400, { error: "At least one rated name is required." });
-      const result = await runCodex(createPrompt(payload));
-      return send(res, 200, result);
+      const count = Math.max(1, Math.min(30, Number(payload.count) || 30));
+      const normalizedPayload = { ...payload, count };
+      const jobKey = payload.decisionId && payload.runId ? `${payload.decisionId}:${payload.runId}` : null;
+      let job = jobKey ? generationJobs.get(jobKey) : null;
+      if (!job) {
+        job = (async () => {
+          try {
+            const result = await runCodex(createPrompt(normalizedPayload));
+            if (!Array.isArray(result.names) || result.names.length !== count) throw new Error(`Codex returned ${result.names?.length || 0} cards instead of ${count}. Retry this set.`);
+            const candidates = await persistGeneration(normalizedPayload, result);
+            return { ...result, candidates };
+          } catch (error) {
+            await persistGenerationError(normalizedPayload, error);
+            throw error;
+          }
+        })();
+        if (jobKey) {
+          const trackedJob = job.then(value => { generationJobs.delete(jobKey); return value; }, error => { generationJobs.delete(jobKey); throw error; });
+          generationJobs.set(jobKey, trackedJob);
+          job = trackedJob;
+        }
+      }
+      return send(res, 200, await job);
     }
     if (req.method === "POST" && req.url === "/api/decisions") {
       const payload = await body(req);
       const title = typeof payload.title === "string" ? payload.title.trim() : "";
       const brief = typeof payload.brief === "string" ? payload.brief.trim() : "";
       if (!title || !brief) return send(res, 400, { error: "A title and decision brief are required." });
-      const result = await runCodex(createPrompt({ mode: "seed", title, brief, count: payload.count || 20 }));
+      const count = Math.max(1, Math.min(30, Number(payload.count) || 30));
+      const result = await runCodex(createPrompt({ mode: "seed", title, brief, count }));
+      if (!Array.isArray(result.names) || result.names.length !== count) return send(res, 502, { error: `Codex returned ${result.names?.length || 0} cards instead of ${count}. Retry this decision.` });
       const workspace = workspaceFrom(await readState());
       const id = decisionId(); const createdAt = new Date().toISOString();
-      const decision = { id, title, brief, kind: "decision", createdAt, candidates: result.names.map((item, index) => ({ id: `${id}-card-${index + 1}`, ...item, source: "generated" })), ratings: [], batches: [], batch: 1, activeIds: [], nextSeed: 20, latestAnalysis: { ...result, analysis: result.analysis || "Initial batch created from the decision brief." } };
+      const decision = { id, title, brief, kind: "decision", createdAt, candidates: result.names.map((item, index) => ({ id: `${id}-card-${index + 1}`, ...item, source: "generated" })), ratings: [], batches: [], batch: 1, activeIds: [], nextSeed: result.names.length, latestAnalysis: { ...result, analysis: result.analysis || "Initial 20 + 10 set created from the decision brief." }, draftReflection: "", prefetch: { status: "idle" } };
       decision.activeIds = decision.candidates.map(item => item.id); workspace.decisions.push(decision); workspace.activeId = id; await writeState(workspace);
       return send(res, 200, { decision, workspace });
     }

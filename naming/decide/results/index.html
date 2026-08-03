@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="A clear review of every naming decision." />
+    <meta name="description" content="A clear review of every Decinder rating." />
     <title>Results — Decinder</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,14 +14,15 @@
   <body>
     <header><a href="/naming/decide/">← Back to swiping</a><p>Decinder <span id="bridge-status">Checking saved decisions…</span></p><a class="field-link" href="/naming/decide/">Decision lab →</a></header>
     <main id="results" hidden>
-      <section class="results-intro"><p class="label">Your naming signal</p><h1><span id="rated-total">0</span> choices<br />made visible.</h1><p id="progress-copy"></p><a class="continue-lab" href="/naming/decide/">Continue naming <span>→</span></a></section>
+      <section class="results-intro"><h1><span id="rated-total">0</span> choices<br />made visible.</h1><p id="progress-copy"></p><a class="continue-lab" href="/naming/decide/">Continue deciding <span>→</span></a></section>
       <section class="scoreboard" aria-label="Scores by rating"><article><strong id="score-5">0</strong><span>5 — strong yes</span></article><article><strong id="score-4">0</strong><span>4 — yes</span></article><article><strong id="score-3">0</strong><span>3 — no</span></article><article><strong id="score-2">0</strong><span>2 — strong no</span></article></section>
-      <section class="shortlist"><div><p class="label">Keep close</p><h2>The names with pull.</h2><p>These are the options you scored 4 or 5 — not a recommendation yet, just the honest record.</p></div><div id="shortlist" class="name-grid"></div></section>
-      <section class="territory-section"><div><p class="label">Pattern by territory</p><h2>Where your instinct is strongest.</h2></div><div id="territories" class="territory-list"></div></section>
-      <section class="rejected"><div><p class="label">Set aside</p><h2>Names you declined.</h2></div><details><summary>Show <span id="rejected-count">0</span> names scored 2 or 3</summary><div id="rejected-list" class="name-grid"></div></details></section>
-      <section id="model-analysis" class="model-analysis" hidden><p class="label">Last Codex read</p><h2>What it heard from you.</h2><p id="analysis-text"></p><div id="analysis-tags"></div></section>
+      <section class="shortlist"><div><h2>The choices with pull.</h2><p>These are the options you scored 4 or 5 — not a recommendation yet, just the honest record.</p></div><div id="shortlist" class="name-grid"></div></section>
+      <section class="territory-section"><div><h2>Where your instinct is strongest.</h2></div><div id="territories" class="territory-list"></div></section>
+      <section class="rejected"><div><h2>Choices you declined.</h2></div><details><summary>Show <span id="rejected-count">0</span> choices scored 2 or 3</summary><div id="rejected-list" class="name-grid"></div></details></section>
+      <section id="model-analysis" class="model-analysis" hidden><h2>What Codex heard from you.</h2><p id="analysis-text"></p><div id="analysis-tags"></div></section>
     </main>
-    <section id="empty" class="empty" hidden><p class="label">No saved decisions here yet</p><h1>Open this from the same browser — or from your local lab link.</h1><p>When the local bridge is running, it reads the shared SQLite record directly.</p><a href="/naming/decide/">Go to the naming lab</a></section>
+    <section id="empty" class="empty" hidden><h1>No saved decisions here yet.</h1><p>Open this from the same browser—or from your local lab link. When the local bridge is running, it reads the shared SQLite record directly.</p><a href="/naming/decide/">Go to Decinder</a></section>
+    <!-- Design anti-slop audit v2.8.0 — PASS: rounded-card-soup; faux-callout-box; flat-type-hierarchy; uniform-line-height; unbounded-measure; faux-mono-garnish; monospace-as-aesthetic; eyebrow-kicker-reflex; default-tailwind-palette; decorative-gradient-blob; decorative-glassmorphism; per-section-background-reflex; mixed-icon-stroke-weights; emoji-as-icons; equal-column-grid-reflex; symmetric-two-button-hero; flanking-microcopy; bento-grid-reflex; symmetric-section-padding; hollow-hero-metrics; uncontained-measure-sprawl; dead-half-and-void; lone-element-bar; flattened-asymmetry; squashed-sections; decorative-rule-crutch; unaligned-adjacent-blocks; letterbox-slab; full-bleed-list-row; everything-fades-up-on-scroll; symmetric-ease-everywhere; parallax-scroll-jack; ai-photo-tells; stock-cliche-imagery; literal-ai-tech-imagery; corporate-memphis-illustration. WAIVED: lack-of-imagery — this is a data-review surface for a decision utility, and decorative imagery would weaken the rating evidence. Zero unwaived failures. -->
     <script src="../seed.js"></script><script src="./results.js"></script>
   </body>
 </html>

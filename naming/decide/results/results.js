@@ -21,7 +21,7 @@ function render(state) {
   $("rated-total").textContent = ratings.length;
   const completed = state.batches?.length || 0;
   const current = ratings.filter(rating => rating.batch === state.batch).length;
-  $("progress-copy").textContent = `${completed} batch${completed === 1 ? "" : "es"} closed, with ${current ? `${current} names waiting for your next reflection` : "the next batch ready"}.`;
+  $("progress-copy").textContent = `${completed} set${completed === 1 ? "" : "s"} closed, with ${current ? `${current} choices rated in the current set` : "the next set ready"}.`;
   [2,3,4,5].forEach(score => $("score-" + score).textContent = ratings.filter(item => item.score === score).length);
   const items = ratings.map(rating => ({ rating, item: candidate(state, rating.id) })).filter(entry => entry.item);
   const shortlist = items.filter(entry => entry.rating.score >= 4).sort((a,b) => b.rating.score - a.rating.score || b.rating.at.localeCompare(a.rating.at));
